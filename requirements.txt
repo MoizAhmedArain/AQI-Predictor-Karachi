@@ -1,0 +1,6 @@
+hopsworks
+pandas
+numpy
+scikit-learn
+requests
+streamlit
