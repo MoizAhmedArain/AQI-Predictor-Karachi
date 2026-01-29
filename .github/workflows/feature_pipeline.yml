@@ -1,0 +1,29 @@
+name: Karachi AQI Feature Pipeline
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # this going to Runs exactly at the start of every hour (UTC)
+  workflow_dispatch:      # Adds a Run Workflow button for manual testing
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Execute Feature Pipeline
+        env:
+          HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+          HOPSWORKS_PROJECT_NAME: ${{ secrets.HOPSWORKS_PROJECT_NAME }}
+        run: python src/feature_pipeline.py
