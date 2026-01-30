@@ -50,27 +50,13 @@ def get_latest_data():
 
 latest_df = get_latest_data()
 
-def add_features(df):
-    # Convert back to datetime for extracting time parts
-    df['datetime'] = pd.to_datetime(df['time'], unit='ms')
-    
-    # 1. Time-based features
-    df['hour'] = df['datetime'].dt.hour
-    df['day_of_week'] = df['datetime'].dt.dayofweek
-    
-    # 2. Lag Feature: What was the PM2.5 24 hours ago?
-    # Note: For real-time pipelines, you'd usually pull the lag from the Feature Store
-    # For now, we calculate it from our fetched 2-day window
-    df['pm2_5_lag_24h'] = df['pm2_5'].shift(24)
-    
-    # Drop rows with NaN (the first 24 hours of our 2-day window will be empty)
-    df = df.dropna()
-    
-    # Drop the helper column
-    df = df.drop(columns=['datetime'])
-    return df
+#Name of the table in the feature group
+aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
 
-# Apply engineering and upload
-final_df = add_features(latest_df)
-aqi_fg.insert(final_df)
-print("Hourly features uploaded to Hopsworks!")
+# 2.Here it Fetch data (Raw from API)
+latest_df = get_latest_data() # This is your function from earlier
+
+try:
+    aqi_fg.insert(latest_df)
+except Exception as e:
+    print(f"Error: {e}")
