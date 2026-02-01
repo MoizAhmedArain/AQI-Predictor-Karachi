@@ -4,12 +4,15 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 import joblib
 import os
+#from dotenv import load_dotenv
 
+#load_dotenv()
 
 project = hopsworks.login(
-    api_key_value="",
+    api_key_value="ji9Y6LdWmUUPtdHa.cdoMmavUmyM1Fk1XRQhuWp8PEtkxI3T0spZCNeE6FHNpZUNJle14dPnbF9qMhLZC",
     project="Project1_AQI_predict"
 )
+
 fs = project.get_feature_store()
 
 # 2. Get the RAW feature group from hopsworks.ai
