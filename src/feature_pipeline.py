@@ -34,7 +34,7 @@ def get_latest_data():
         "longitude": 67.0011,
         "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m",
         "past_days": 2,
-        "forecast_days": 0
+        "forecast_days": 3
     }
 
     aq_resp = requests.get(url, params=params).json()
@@ -60,3 +60,5 @@ try:
     aqi_fg.insert(latest_df)
 except Exception as e:
     print(f"Error: {e}")
+
+    
