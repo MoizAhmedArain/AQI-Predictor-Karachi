@@ -47,7 +47,7 @@ def main():
         logging.info("Loading historical AQI data...")
 
         aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
-        hist_df = aqi_fg.read().sort_values('time').reset_index(drop=True)
+        hist_df = aqi_fg.read(dataframe_type="pandas").sort_values('time').reset_index(drop=True)
 
         if hist_df.empty:
             raise Exception("Historical dataset is empty")
