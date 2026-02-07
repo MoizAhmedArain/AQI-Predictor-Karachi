@@ -27,7 +27,7 @@ def main():
     
         logging.info("Downloading model from registry...")
 
-        model_meta = mr.get_model("karachi_aqi_model", version=1)
+        model_meta = mr.get_model("karachi_aqi_model", version=2)
         model_dir = model_meta.download()
 
         model_path = os.path.join(model_dir, "model.pkl")
