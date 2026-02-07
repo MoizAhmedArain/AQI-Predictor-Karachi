@@ -1,15 +1,15 @@
-/* ===== GLOBAL BACKGROUND ===== */
+/* GLOBAL BACKGROUND  */
 .stApp {
     background: radial-gradient(circle at 15% 25%, #0a0f1c, #04060d 75%);
     color: #e6edf3;
 }
 
-/* Remove default header background */
+
 [data-testid="stHeader"] {
     background: transparent;
 }
 
-/* ===== GLASS CARD ===== */
+/*  GLASS CARD  */
 .glass-card {
     background: rgba(255, 255, 255, 0.04);
     border-radius: 20px;
@@ -24,19 +24,19 @@
     transform: translateY(-4px);
 }
 
-/* ===== TITLES ===== */
+/*  TITLES  */
 h1, h2, h3 {
     font-weight: 600;
     letter-spacing: 0.4px;
 }
 
-/* ===== STATUS COLORS ===== */
+/*  STATUS COLORS  */
 .aqi-good { color: #22c55e; }
 .aqi-moderate { color: #f59e0b; }
 .aqi-unhealthy { color: #ef4444; }
 .aqi-hazard { color: #dc2626; }
 
-/* ===== SCROLLBAR ===== */
+/*  SCROLLBAR  */
 ::-webkit-scrollbar {
     width: 8px;
 }

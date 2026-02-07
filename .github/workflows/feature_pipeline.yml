@@ -2,8 +2,8 @@ name: Karachi AQI Feature Pipeline
 
 on:
   schedule:
-    - cron: '0 * * * *'  # this going to Runs exactly at the start of every hour (UTC)
-  workflow_dispatch:      # Adds a Run Workflow button for manual testing
+    - cron: '0 * * * *'  # this Runs exactly at the start of every hour 
+  workflow_dispatch:      # Added a Run Workflow button for manual testing
 
 jobs:
   run-pipeline:
