@@ -39,22 +39,29 @@ def main():
         scaler = joblib.load(scaler_path)
         logging.info("Model and Scaler loaded successfully.")
 
-        # 3. LOAD HISTORICAL DATA (Using Feature View for Stability)
-        logging.info("Retrieving historical AQI data...")
+        # 3. LOAD HISTORICAL DATA (The "Binder Error" Bypass)
+        logging.info("Retrieving historical AQI data from Online Store...")
+        
         try:
-            # We use the View to avoid the DuckDB 'time' column Binder error
-            fv = fs.get_feature_view(name="karachi_aqi_view", version=1)
-            hist_df = fv.get_batch_data()
-        except Exception as e:
-            logging.warning(f"Feature View read failed ({e}). Falling back to direct Feature Group read...")
+            # We use online=True to bypass the offline DuckDB Binder bug.
+            # This is faster and much more stable for batch inference.
             aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
-            hist_df = aqi_fg.read()
+            
+            # This pulls the data directly without the broken metadata mapping
+            hist_df = aqi_fg.read(online=True)
+            
+            if hist_df.empty:
+                logging.warning("Online store empty, trying a 'Clean SQL' offline read...")
+                # Fallback: A direct SQL query often bypasses the binder bug
+                hist_df = fs.sql(f"SELECT * FROM `{aqi_fg.name}_{aqi_fg.version}`").read()
 
-        if hist_df is None or hist_df.empty:
-            raise Exception("Historical data is empty. Cannot generate lags.")
+        except Exception as e:
+            logging.error(f"Primary read failed: {e}")
+            raise Exception("Could not fetch history. Ensure 'Online Enabled' is checked in Hopsworks for this Feature Group.")
 
+        # Ensure columns are clean and data is sorted
         hist_df = hist_df.sort_values('time').reset_index(drop=True)
-        logging.info(f" History loaded. Latest PM2.5: {hist_df['pm2_5'].iloc[-1]}")
+        logging.info(f" History loaded successfully. Row count: {len(hist_df)}")
 
         # 4. FETCH WEATHER FORECAST (Open-Meteo)
         logging.info("Fetching 72-hour weather forecast...")
