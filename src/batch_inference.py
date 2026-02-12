@@ -16,10 +16,9 @@ logging.basicConfig(
 def main():
     try:
         # 1. INITIALIZATION
-        load_dotenv() # Ensure .env is loaded
+        load_dotenv()
         logging.info("Connecting to Hopsworks...")
         
-        # Explicit login is safer for local/CI environments
         project = hopsworks.login()
         fs = project.get_feature_store()
         mr = project.get_model_registry()
@@ -37,31 +36,21 @@ def main():
             
         model = joblib.load(model_path)
         scaler = joblib.load(scaler_path)
-        logging.info("Model and Scaler loaded successfully.")
+        logging.info("✅ Model and Scaler loaded successfully.")
 
-        # 3. LOAD HISTORICAL DATA (The "Binder Error" Bypass)
+        # 3. LOAD HISTORICAL DATA (The "Online" Fix)
         logging.info("Retrieving historical AQI data from Online Store...")
+        aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
         
-        try:
-            # We use online=True to bypass the offline DuckDB Binder bug.
-            # This is faster and much more stable for batch inference.
-            aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
-            
-            # This pulls the data directly without the broken metadata mapping
-            hist_df = aqi_fg.read(online=True)
-            
-            if hist_df.empty:
-                logging.warning("Online store empty, trying a 'Clean SQL' offline read...")
-                # Fallback: A direct SQL query often bypasses the binder bug
-                hist_df = fs.sql(f"SELECT * FROM `{aqi_fg.name}_{aqi_fg.version}`").read()
+        # Pulling from Online Store to bypass DuckDB Binder Error
+        hist_df = aqi_fg.read(online=True)
+        
+        if hist_df is None or hist_df.empty:
+            raise Exception("No historical data found. Run feature_pipeline.py first!")
 
-        except Exception as e:
-            logging.error(f"Primary read failed: {e}")
-            raise Exception("Could not fetch history. Ensure 'Online Enabled' is checked in Hopsworks for this Feature Group.")
-
-        # Ensure columns are clean and data is sorted
+        # Ensure chronological order for lag calculation
         hist_df = hist_df.sort_values('time').reset_index(drop=True)
-        logging.info(f" History loaded successfully. Row count: {len(hist_df)}")
+        logging.info(f"✅ History loaded. Latest PM2.5: {hist_df['pm2_5'].iloc[-1]}")
 
         # 4. FETCH WEATHER FORECAST (Open-Meteo)
         logging.info("Fetching 72-hour weather forecast...")
@@ -77,19 +66,18 @@ def main():
         resp.raise_for_status()
         future_weather_df = pd.DataFrame(resp.json()["hourly"])
         
-        logging.info(f" Weather forecast fetched for {len(future_weather_df)} hours.")
+        logging.info(f"✅ Weather forecast fetched for {len(future_weather_df)} hours.")
 
         # 5. GENERATE ALIGNED FORECAST (Sliding Window)
-        logging.info(" Running inference loop...")
+        logging.info("🔮 Running inference loop...")
         predictions_list = []
-        # 'current_window' stores the history + new predictions to calculate lags
         current_window = hist_df.copy()
 
         for i in range(len(future_weather_df)):
             weather_row = future_weather_df.iloc[i]
             target_time = pd.to_datetime(weather_row['time'])
 
-            # Prepare features exactly in the order the model saw during training
+            # --- FIXED TYPO HERE: relative_humidity_2m ---
             input_data = {
                 'temperature_2m': weather_row['temperature_2m'],
                 'relative_humidity_2m': weather_row['relative_humidity_2m'],
@@ -99,16 +87,17 @@ def main():
                 'pm2_5_lag_24h': current_window['pm2_5'].iloc[-24] if len(current_window) >= 24 else current_window['pm2_5'].iloc[-1]
             }
 
+            # Ensure columns are in the EXACT order used during training
             features_df = pd.DataFrame([input_data])[[
                 'temperature_2m', 'relative_humidity_2m', 'wind_speed_10m', 
                 'hour', 'pm2_5_lag_1h', 'pm2_5_lag_24h'
             ]]
 
-            # Predict
+            # Scale and Predict
             scaled_features = scaler.transform(features_df)
             prediction = model.predict(scaled_features)[0]
 
-            # Save prediction
+            # Store the prediction
             predictions_list.append({
                 'city': 'Karachi',
                 'prediction_time': target_time.strftime('%Y-%m-%d %H:%M:%S'),
@@ -116,10 +105,11 @@ def main():
                 'forecast_hour_out': i + 1
             })
 
-            # Update the window so the NEXT hour can use THIS prediction as its 'lag_1h'
+            # Append prediction to window to use as lag for the next iteration
             new_row = pd.DataFrame([{
                 'time': int(target_time.timestamp() * 1000),
-                'pm2_5': prediction
+                'pm2_5': prediction,
+                'city': 'Karachi'
             }])
             current_window = pd.concat([current_window, new_row], ignore_index=True)
 
@@ -131,12 +121,14 @@ def main():
             name="aqi_predictions",
             version=1,
             primary_key=['city', 'prediction_time'],
-            description="72-hour forecast based on real Open-Meteo weather data",
+            description="72-hour forecast for Karachi AQI",
             online_enabled=True
         )
-        pred_fg.insert(predictions_final_df)
         
-        logging.info("✨ SUCCESS! Batch inference completed and uploaded.")
+        # Added write_options to prevent Kafka Timeout on local machines
+        pred_fg.insert(predictions_final_df, write_options={"wait_for_job": False})
+        
+        logging.info(" SUCCESS! Batch inference completed.")
 
     except Exception as e:
         logging.error(f" PIPELINE FAILED: {str(e)}")
