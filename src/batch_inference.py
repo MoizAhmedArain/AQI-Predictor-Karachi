@@ -42,7 +42,7 @@ def main():
         logging.info("Retrieving historical data via Feature View Batch...")
         
         # Get the feature view you created earlier
-        fv = fs.get_feature_view(name="karachi_aqi_view", version=1)
+        fv = fs.get_feature_view(name="karachi_aqi_view", version=2)
         
         # This is the 4.0 way to read offline data without SQL or Hive errors
         hist_df = fv.get_batch_data()
