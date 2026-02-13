@@ -1,4 +1,5 @@
 hopsworks
+confluent-kafka
 pandas
 numpy
 scikit-learn
