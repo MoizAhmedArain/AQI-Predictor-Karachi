@@ -38,33 +38,21 @@ def main():
         scaler = joblib.load(scaler_path)
         logging.info(" Model and Scaler loaded successfully.")
 
-        # 3. LOAD HISTORICAL DATA (Robust Fallback Method)
-        logging.info("Retrieving historical AQI data...")
-        aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
+        # 3. LOAD HISTORICAL DATA (The 4.0 Batch Way)
+        logging.info("Retrieving historical data via Feature View Batch...")
         
-        hist_df = None
+        # Get the feature view you created earlier
+        fv = fs.get_feature_view(name="karachi_aqi_view", version=1)
         
-        # Strategy A: Try Online Store
-        try:
-            logging.info("Attempting Online Store read...")
-            hist_df = aqi_fg.read(online=True)
-        except Exception as e:
-            logging.warning(f"Online read failed: {e}")
-
-        # Strategy B: If Online is empty/failed, try Offline Store (The Reliable Way)
+        # This is the 4.0 way to read offline data without SQL or Hive errors
+        hist_df = fv.get_batch_data()
+        
         if hist_df is None or hist_df.empty:
-            logging.info("Online Store empty. Falling back to Offline Store (Direct SQL)...")
-            # We use SQL to bypass any 'Binder' errors in the standard read()
-            query = f"SELECT * FROM `{aqi_fg.name}_{aqi_fg.version}` WHERE city = 'karachi'"
-            hist_df = fs.sql(query).read(dataframe_type="pandas")
+            raise Exception("No data found in Feature View!")
 
-        # Final Check
-        if hist_df is None or hist_df.empty:
-            raise Exception("CRITICAL: No data found in either Store. Please check Hopsworks UI to see if data exists.")
-
-        # Sorting is essential for lag features
+        # Standard sorting for your lag features
         hist_df = hist_df.sort_values('time').reset_index(drop=True)
-        logging.info(f" History loaded. Found {len(hist_df)} rows. Latest: {hist_df['time'].iloc[-1]}")
+        logging.info(f" History loaded. Rows: {len(hist_df)}")
 
         # 4. FETCH WEATHER FORECAST (Open-Meteo)
         logging.info("Fetching 72-hour weather forecast...")
