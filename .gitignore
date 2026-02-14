@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .venv/
 src/aqi_model/
-dev/
+/dev/
+
 
 

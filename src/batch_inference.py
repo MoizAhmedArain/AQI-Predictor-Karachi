@@ -36,7 +36,7 @@ def main():
             
         model = joblib.load(model_path)
         scaler = joblib.load(scaler_path)
-        logging.info("✅ Model and Scaler loaded successfully.")
+        logging.info(" Model and Scaler loaded successfully.")
 
         # 3. LOAD HISTORICAL DATA
         logging.info("Retrieving historical data from Feature View (v2)...")
@@ -53,7 +53,7 @@ def main():
 
         # Sorting is critical for lag calculations
         hist_df = hist_df.sort_values('time').reset_index(drop=True)
-        logging.info(f"✅ History loaded. Rows: {len(hist_df)}. Columns: {list(hist_df.columns)}")
+        logging.info(f" History loaded. Rows: {len(hist_df)}. Columns: {list(hist_df.columns)}")
 
         # 4. FETCH WEATHER FORECAST (Open-Meteo)
         logging.info("Fetching 72-hour weather forecast...")
@@ -69,7 +69,7 @@ def main():
         resp.raise_for_status()
         future_weather_df = pd.DataFrame(resp.json()["hourly"])
         
-        logging.info(f"✅ Weather forecast fetched for {len(future_weather_df)} hours.")
+        logging.info(f" Weather forecast fetched for {len(future_weather_df)} hours.")
 
         # 5. GENERATE ALIGNED FORECAST (Sliding Window)
         logging.info("Running inference loop...")
@@ -133,10 +133,10 @@ def main():
         # Write the batch of predictions
         pred_fg.insert(predictions_final_df, write_options={"wait_for_job": False})
         
-        logging.info("🚀 SUCCESS! Batch inference completed.")
+        logging.info(" SUCCESS! Batch inference completed.")
 
     except Exception as e:
-        logging.error(f"❌ PIPELINE FAILED: {str(e)}")
+        logging.error(f" PIPELINE FAILED: {str(e)}")
         raise e
 
 if __name__ == "__main__":
