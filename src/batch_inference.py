@@ -36,23 +36,24 @@ def main():
             
         model = joblib.load(model_path)
         scaler = joblib.load(scaler_path)
-        logging.info(" Model and Scaler loaded successfully.")
+        logging.info("✅ Model and Scaler loaded successfully.")
 
-        # 3. LOAD HISTORICAL DATA (The 4.0 Batch Way)
-        logging.info("Retrieving historical data via Feature View Batch...")
-        
-        # Get the feature view you created earlier
+        # 3. LOAD HISTORICAL DATA
+        logging.info("Retrieving historical data from Feature View (v2)...")
         fv = fs.get_feature_view(name="karachi_aqi_view", version=2)
         
-        # This is the 4.0 way to read offline data without SQL or Hive errors
+        # Pulling offline data via the 4.0 Batch method
         hist_df = fv.get_batch_data()
         
         if hist_df is None or hist_df.empty:
             raise Exception("No data found in Feature View!")
 
-        # Standard sorting for your lag features
+        # Robust Column Cleaning (Handles dictionary names if they ever reappear)
+        hist_df.columns = [col.split("'name': '")[1].split("'")[0] if "'name': '" in str(col) else col for col in hist_df.columns]
+
+        # Sorting is critical for lag calculations
         hist_df = hist_df.sort_values('time').reset_index(drop=True)
-        logging.info(f" History loaded. Rows: {len(hist_df)}")
+        logging.info(f"✅ History loaded. Rows: {len(hist_df)}. Columns: {list(hist_df.columns)}")
 
         # 4. FETCH WEATHER FORECAST (Open-Meteo)
         logging.info("Fetching 72-hour weather forecast...")
@@ -68,10 +69,10 @@ def main():
         resp.raise_for_status()
         future_weather_df = pd.DataFrame(resp.json()["hourly"])
         
-        logging.info(f" Weather forecast fetched for {len(future_weather_df)} hours.")
+        logging.info(f"✅ Weather forecast fetched for {len(future_weather_df)} hours.")
 
         # 5. GENERATE ALIGNED FORECAST (Sliding Window)
-        logging.info(" Running inference loop...")
+        logging.info("Running inference loop...")
         predictions_list = []
         current_window = hist_df.copy()
 
@@ -79,27 +80,29 @@ def main():
             weather_row = future_weather_df.iloc[i]
             target_time = pd.to_datetime(weather_row['time'])
 
-            # --- FIXED TYPO HERE: relative_humidity_2m ---
+            # Calculation of features (Lag and Hour)
+            # Safety: If history is shorter than 24h, use the last available PM2.5 for the 24h lag
+            pm25_lag_1 = current_window['pm2_5'].iloc[-1]
+            pm25_lag_24 = current_window['pm2_5'].iloc[-24] if len(current_window) >= 24 else pm25_lag_1
+
             input_data = {
                 'temperature_2m': weather_row['temperature_2m'],
                 'relative_humidity_2m': weather_row['relative_humidity_2m'],
                 'wind_speed_10m': weather_row['wind_speed_10m'],
                 'hour': target_time.hour,
-                'pm2_5_lag_1h': current_window['pm2_5'].iloc[-1],
-                'pm2_5_lag_24h': current_window['pm2_5'].iloc[-24] if len(current_window) >= 24 else current_window['pm2_5'].iloc[-1]
+                'pm2_5_lag_1h': pm25_lag_1,
+                'pm2_5_lag_24h': pm25_lag_24
             }
 
-            # Ensure columns are in the EXACT order used during training
-            features_df = pd.DataFrame([input_data])[[
-                'temperature_2m', 'relative_humidity_2m', 'wind_speed_10m', 
-                'hour', 'pm2_5_lag_1h', 'pm2_5_lag_24h'
-            ]]
+            # Define the EXACT order the model was trained on
+            feature_order = ['temperature_2m', 'relative_humidity_2m', 'wind_speed_10m', 'hour', 'pm2_5_lag_1h', 'pm2_5_lag_24h']
+            features_df = pd.DataFrame([input_data])[feature_order]
 
             # Scale and Predict
             scaled_features = scaler.transform(features_df)
             prediction = model.predict(scaled_features)[0]
 
-            # Store the prediction
+            # Store the prediction results
             predictions_list.append({
                 'city': 'Karachi',
                 'prediction_time': target_time.strftime('%Y-%m-%d %H:%M:%S'),
@@ -107,7 +110,7 @@ def main():
                 'forecast_hour_out': i + 1
             })
 
-            # Append prediction to window to use as lag for the next iteration
+            # Update the window so the next iteration can use this prediction as a lag
             new_row = pd.DataFrame([{
                 'time': int(target_time.timestamp() * 1000),
                 'pm2_5': prediction,
@@ -118,7 +121,7 @@ def main():
         predictions_final_df = pd.DataFrame(predictions_list)
 
         # 6. UPLOAD TO HOPSWORKS
-        logging.info(" Uploading results to Hopsworks...")
+        logging.info("Uploading results to Hopsworks...")
         pred_fg = fs.get_or_create_feature_group(
             name="aqi_predictions",
             version=1,
@@ -127,13 +130,13 @@ def main():
             online_enabled=True
         )
         
-        # Added write_options to prevent Kafka Timeout on local machines
+        # Write the batch of predictions
         pred_fg.insert(predictions_final_df, write_options={"wait_for_job": False})
         
-        logging.info(" SUCCESS! Batch inference completed.")
+        logging.info("🚀 SUCCESS! Batch inference completed.")
 
     except Exception as e:
-        logging.error(f" PIPELINE FAILED: {str(e)}")
+        logging.error(f"❌ PIPELINE FAILED: {str(e)}")
         raise e
 
 if __name__ == "__main__":
