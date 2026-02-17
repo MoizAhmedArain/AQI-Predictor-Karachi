@@ -39,20 +39,31 @@ def main():
         logging.info(" Model and Scaler loaded successfully.")
 
         # 3. LOAD HISTORICAL DATA
-        logging.info("Loading historical AQI and weather data...")
-        aqi_fg = fs.get_feature_group(name="karachi_aqi_view", version=1)    
-        hist_df = aqi_fg.read(read_options={"use_hive": False})
+        logging.info("Loading historical AQI and weather data from Feature View...")
+
+# 1. Use get_feature_view instead of get_feature_group
+# Note: Name matches your view, version is likely 1 or 2 as per your previous logs
+        feature_view = fs.get_feature_view(name="karachi_aqi_view", version=1)
+
+        # 2. Use get_batch_data() for Feature Views
+        # We include primary_key and event_time to ensure 'time' and 'city' are returned
+        hist_df = feature_view.get_batch_data(
+            read_options={"use_hive": False},
+            primary_key=True,
+            event_time=True
+        )
 
         if hist_df is None or hist_df.empty:
-            raise Exception("No data found in Feature Group!")
-            
-        # Robust Column Cleaning (Handles dictionary names if they ever reappear)
-        #hist_df.columns = [col.split("'name': '")[1].split("'")[0] if "'name': '" in str(col) else col for col in hist_df.columns]
+            raise Exception("No data found in Feature View!")
 
-        # Sorting is critical for lag calculations
+        # 3. Clean column names (handles the dictionary format bug automatically)
+        hist_df.columns = [col.split("'name': '")[1].split("'")[0] if "'name': '" in str(col) else col for col in hist_df.columns]
+        hist_df.columns = [c.lower() for c in hist_df.columns]
+
+        # 4. Sorting for lag calculations
         hist_df = hist_df.sort_values('time').reset_index(drop=True)
-        logging.info(f" History loaded. Rows: {len(hist_df)}. Columns: {list(hist_df.columns)}")
 
+        logging.info(f"✅ History loaded. Rows: {len(hist_df)}. Columns: {list(hist_df.columns)}")
         # 4. FETCH WEATHER FORECAST (Open-Meteo)
         logging.info("Fetching 72-hour weather forecast...")
         weather_url = "https://api.open-meteo.com/v1/forecast"
