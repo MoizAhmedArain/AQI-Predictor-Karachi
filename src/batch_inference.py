@@ -43,7 +43,7 @@ def main():
 
 # 1. Use get_feature_view instead of get_feature_group
 # Note: Name matches your view, version is likely 1 or 2 as per your previous logs
-        feature_view = fs.get_feature_view(name="karachi_aqi_view", version=1)
+        feature_view = fs.get_feature_view(name="karachi_aqi_view", version=2)
 
         # 2. Use get_batch_data() for Feature Views
         # We include primary_key and event_time to ensure 'time' and 'city' are returned
@@ -63,7 +63,7 @@ def main():
         # 4. Sorting for lag calculations
         hist_df = hist_df.sort_values('time').reset_index(drop=True)
 
-        logging.info(f"✅ History loaded. Rows: {len(hist_df)}. Columns: {list(hist_df.columns)}")
+        logging.info(f" History loaded. Rows: {len(hist_df)}. Columns: {list(hist_df.columns)}")
         # 4. FETCH WEATHER FORECAST (Open-Meteo)
         logging.info("Fetching 72-hour weather forecast...")
         weather_url = "https://api.open-meteo.com/v1/forecast"
