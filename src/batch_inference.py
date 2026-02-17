@@ -39,25 +39,13 @@ def main():
         logging.info(" Model and Scaler loaded successfully.")
 
         # 3. LOAD HISTORICAL DATA
-        logging.info("Retrieving historical data from Feature View (v2)...")
-        sql_query = """
-        SELECT 
-            `fg0`.`time` `time`, 
-            `fg0`.`temperature_2m` `temperature_2m`, 
-            `fg0`.`relative_humidity_2m` `relative_humidity_2m`, 
-            `fg0`.`wind_speed_10m` `wind_speed_10m`, 
-            `fg0`.`pm2_5` `pm2_5`, 
-            `fg0`.`city` `city`
-        FROM `karachi_aqi_weather_1` `fg0`
-        """
-        
-        # Execute via the Feature Store's SQL method
-        hist_df = fs.sql(sql_query)
-        
-        if hist_df is None or hist_df.empty:
-            raise Exception("SQL Query returned no data!")
-            
+        logging.info("Loading historical AQI and weather data...")
+        aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)    
+        hist_df = aqi_fg.read(read_options={"use_hive": False})
 
+        if hist_df is None or hist_df.empty:
+            raise Exception("No data found in Feature Group!")
+            
         # Robust Column Cleaning (Handles dictionary names if they ever reappear)
         #hist_df.columns = [col.split("'name': '")[1].split("'")[0] if "'name': '" in str(col) else col for col in hist_df.columns]
 
