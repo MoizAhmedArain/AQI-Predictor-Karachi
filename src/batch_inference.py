@@ -47,6 +47,8 @@ def main():
         # 3. Clean column names (handles the dictionary format bug automatically)
         # 1. Access the Feature Group directly (bypassing the broken Feature View)
         aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
+        aqi_fg = fs.get_feature_groups()
+        print([fg.name for fg in aqi_fgs])
 
         # 2. Force the use of the Python engine to bypass the Hive/Query Service error
         hist_df = aqi_fg.read(read_options={"use_hive": False})
