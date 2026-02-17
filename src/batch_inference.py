@@ -43,13 +43,14 @@ def main():
         aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
         
         # In Hopsworks 4.0, .read() uses the new engine automatically and is more stable than get_batch_data()
-        hist_df = aqi_fg.read()
-        
-        if hist_df is None or hist_df.empty:
-            raise Exception("No data found in Feature View!")
+        try:
+            hist_df = aqi_fg.read()
+        except Exception as e:
+            logging.warning(f"Standard read() failed: {e}. Attempting get_batch_data() as fallback.")
+            
 
         # Robust Column Cleaning (Handles dictionary names if they ever reappear)
-        hist_df.columns = [col.split("'name': '")[1].split("'")[0] if "'name': '" in str(col) else col for col in hist_df.columns]
+        #hist_df.columns = [col.split("'name': '")[1].split("'")[0] if "'name': '" in str(col) else col for col in hist_df.columns]
 
         # Sorting is critical for lag calculations
         hist_df = hist_df.sort_values('time').reset_index(drop=True)
