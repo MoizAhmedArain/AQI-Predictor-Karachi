@@ -41,26 +41,18 @@ def main():
         # 3. LOAD HISTORICAL DATA
         logging.info("Loading historical AQI and weather data from Feature View...")
 
-# 1. Use get_feature_view instead of get_feature_group
-# Note: Name matches your view, version is likely 1 or 2 as per your previous logs
-        feature_view = fs.get_feature_view(name="karachi_aqi_view", version=2)
-
-        # 2. Use get_batch_data() for Feature Views
-        # We include primary_key and event_time to ensure 'time' and 'city' are returned
-        hist_df = feature_view.get_batch_data(
-            read_options={"use_hive": False},
-            primary_key=True,
-            event_time=True
-        )
-
-        if hist_df is None or hist_df.empty:
-            raise Exception("No data found in Feature View!")
-
+        # 1. Use get_feature_view instead of get_feature_group
+        # Note: Name matches your view, version is likely 1 or 2 as per your previous logs
+        
         # 3. Clean column names (handles the dictionary format bug automatically)
-        hist_df.columns = [col.split("'name': '")[1].split("'")[0] if "'name': '" in str(col) else col for col in hist_df.columns]
-        hist_df.columns = [c.lower() for c in hist_df.columns]
+        # 1. Access the Feature Group directly (bypassing the broken Feature View)
+        aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
 
-        # 4. Sorting for lag calculations
+        # 2. Force the use of the Python engine to bypass the Hive/Query Service error
+        hist_df = aqi_fg.read(read_options={"use_hive": False})
+
+        # 3. Standardize and sort
+        hist_df.columns = [c.lower() for c in hist_df.columns]
         hist_df = hist_df.sort_values('time').reset_index(drop=True)
 
         logging.info(f" History loaded. Rows: {len(hist_df)}. Columns: {list(hist_df.columns)}")
