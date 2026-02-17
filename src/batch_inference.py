@@ -40,10 +40,10 @@ def main():
 
         # 3. LOAD HISTORICAL DATA
         logging.info("Retrieving historical data from Feature View (v2)...")
-        fv = fs.get_feature_view(name="karachi_aqi_view", version=2)
+        aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
         
-        # Pulling offline data via the 4.0 Batch method
-        hist_df = fv.get_batch_data()
+        # In Hopsworks 4.0, .read() uses the new engine automatically and is more stable than get_batch_data()
+        hist_df = aqi_fg.read()
         
         if hist_df is None or hist_df.empty:
             raise Exception("No data found in Feature View!")
