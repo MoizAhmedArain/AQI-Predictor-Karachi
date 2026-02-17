@@ -40,7 +40,7 @@ def main():
 
         # 3. LOAD HISTORICAL DATA
         logging.info("Loading historical AQI and weather data...")
-        aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)    
+        aqi_fg = fs.get_feature_group(name="karachi_aqi_view", version=1)    
         hist_df = aqi_fg.read(read_options={"use_hive": False})
 
         if hist_df is None or hist_df.empty:
