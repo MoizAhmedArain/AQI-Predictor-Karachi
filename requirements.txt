@@ -1,5 +1,6 @@
 hopsworks==4.2.10
 pandas
+kafka-python
 numpy
 scikit-learn
 requests

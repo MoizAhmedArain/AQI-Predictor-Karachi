@@ -90,7 +90,7 @@ def main():
         # 5. INSERT DATA
         # insert() will handle both initial upload and future updates (upserts)
         logging.info("Uploading data to Hopsworks...")
-        aqi_fg.insert(latest_df)
+        aqi_fg.insert(latest_df, write_options={"wait_for_job": False})
         
         logging.info(" Feature Pipeline completed successfully.")
 
