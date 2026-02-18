@@ -20,52 +20,37 @@ def main():
         load_dotenv()
         logging.info("Connecting to Hopsworks...")
         
-        project = hopsworks.login()
-        fs = project.get_feature_store()
-        mr = project.get_model_registry()
+        # MODEL SESSION
+        project_model = hopsworks.login()
+        mr = project_model.get_model_registry()
 
-        # 2. LOAD MODEL & SCALER (v2)
-        logging.info("Downloading model artifact (v2)...")
         model_meta = mr.get_model("karachi_aqi_model", version=2)
         model_dir = model_meta.download()
-        
-        model_path = os.path.join(model_dir, "model.pkl")
-        scaler_path = os.path.join(model_dir, "scaler.pkl")
-        
-        if not os.path.exists(model_path) or not os.path.exists(scaler_path):
-            raise FileNotFoundError("Model or Scaler file missing from download directory.")
-            
-        model = joblib.load(model_path)
-        scaler = joblib.load(scaler_path)
-        logging.info(" Model and Scaler loaded successfully.")
+
+        model = joblib.load(os.path.join(model_dir, "model.pkl"))
+        scaler = joblib.load(os.path.join(model_dir, "scaler.pkl"))
+
+        project_model.logout()
 
 
-        # 1. Use get_feature_view instead of get_feature_group
-        # 3. LOAD HISTORICAL DATA
-        logging.info("Loading historical AQI and weather data directly from Feature Group...")
+        # FEATURE STORE SESSION
+        project_fs = hopsworks.login()
+        fs = project_fs.get_feature_store()
 
-        # We bypass the broken Feature View and go to the Group
         aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
 
-        # Read data using the Python engine (as verified in your standalone test)
         for attempt in range(3):
             try:
                 hist_df = aqi_fg.read(read_options={"use_hive": False})
                 break
-            except Exception as e:
-                print(f"Read attempt {attempt+1} failed, retrying...")
+            except:
                 time.sleep(5)
-        else:
-            raise Exception("Failed to read Feature Group after retries")
 
-            
-        # Standardize column names
-        hist_df.columns = [c.lower() for c in hist_df.columns]
+        hist_df = hist_df.sort_values('time').reset_index(drop=True)
 
-        # Sorting is critical for ruf.pyyour lag calculations in Step 5
+        project_fs.logout()
+        logging.info("Done Feature Store connection and data retrieval.")
 
-
-        logging.info(f" History loaded. Rows: {len(hist_df)}. Columns: {list(hist_df.columns)}") 
 
         # 4. FETCH WEATHER FORECAST (Open-Meteo)
         logging.info("Fetching 72-hour weather forecast...")
