@@ -41,23 +41,22 @@ def main():
         # 3. LOAD HISTORICAL DATA
         logging.info("Loading historical AQI and weather data from Feature View...")
 
-        # 1. Use get_feature_view instead of get_feature_group
-        # Note: Name matches your view, version is likely 1 or 2 as per your previous logs
+        fgs = fs.get_feature_groups()
+
+        aqi_fg = next((fg for fg in fgs if fg.name == 'karachi_aqi_weather'), None)
         
-        # 3. Clean column names (handles the dictionary format bug automatically)
-        # 1. Access the Feature Group directly (bypassing the broken Feature View)
-        aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
-        aqi_fg = fs.get_feature_groups()
-        print([fg.name for fg in aqi_fg])
-
-        # 2. Force the use of the Python engine to bypass the Hive/Query Service error
+        if aqi_fg is None:
+            raise ValueError(f"Could not find 'karachi_aqi_weather' in: {[fg.name for fg in fgs]}")
+        
+        # 3. Now read the data (using the Python engine to bypass Hive)
+        logging.info(f"Reading data from Feature Group: {aqi_fg.name}")
         hist_df = aqi_fg.read(read_options={"use_hive": False})
-
-        # 3. Standardize and sort
+        
+        # 4. Standardize
         hist_df.columns = [c.lower() for c in hist_df.columns]
         hist_df = hist_df.sort_values('time').reset_index(drop=True)
-
-        logging.info(f" History loaded. Rows: {len(hist_df)}. Columns: {list(hist_df.columns)}")
+        
+        logging.info(f" SUCCESS! Loaded {len(hist_df)} rows.")
         # 4. FETCH WEATHER FORECAST (Open-Meteo)
         logging.info("Fetching 72-hour weather forecast...")
         weather_url = "https://api.open-meteo.com/v1/forecast"
