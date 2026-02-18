@@ -6,6 +6,7 @@ import hopsworks
 import logging
 from datetime import datetime
 from dotenv import load_dotenv
+import time
 
 # --- LOGGING SETUP ---
 logging.basicConfig(
@@ -38,29 +39,34 @@ def main():
         scaler = joblib.load(scaler_path)
         logging.info(" Model and Scaler loaded successfully.")
 
-        # 3. LOAD HISTORICAL DATA
-        logging.info("Loading historical AQI and weather data from Feature View...")
 
-# 1. Use get_feature_view instead of get_feature_group
- # 3. LOAD HISTORICAL DATA
+        # 1. Use get_feature_view instead of get_feature_group
+        # 3. LOAD HISTORICAL DATA
         logging.info("Loading historical AQI and weather data directly from Feature Group...")
 
         # We bypass the broken Feature View and go to the Group
         aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
 
         # Read data using the Python engine (as verified in your standalone test)
-        hist_df = aqi_fg.read(read_options={"use_hive": False})
+        for attempt in range(3):
+            try:
+                hist_df = aqi_fg.read(read_options={"use_hive": False})
+                break
+            except Exception as e:
+                print(f"Read attempt {attempt+1} failed, retrying...")
+                time.sleep(5)
+        else:
+            raise Exception("Failed to read Feature Group after retries")
 
-        if hist_df is None or hist_df.empty:
-            raise Exception("No data found in Feature Group!")
-
+            
         # Standardize column names
         hist_df.columns = [c.lower() for c in hist_df.columns]
 
-        # Sorting is critical for your lag calculations in Step 5
-        hist_df = hist_df.sort_values('time').reset_index(drop=True)
+        # Sorting is critical for ruf.pyyour lag calculations in Step 5
 
-        logging.info(f" History loaded. Rows: {len(hist_df)}. Columns: {list(hist_df.columns)}")
+
+        logging.info(f" History loaded. Rows: {len(hist_df)}. Columns: {list(hist_df.columns)}") 
+
         # 4. FETCH WEATHER FORECAST (Open-Meteo)
         logging.info("Fetching 72-hour weather forecast...")
         weather_url = "https://api.open-meteo.com/v1/forecast"
