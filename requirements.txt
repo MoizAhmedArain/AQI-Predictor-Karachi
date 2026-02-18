@@ -1,6 +1,6 @@
 hopsworks==4.2.10
 pandas
-kafka-python
+confluent-kafka
 numpy
 scikit-learn
 requests
