@@ -7,8 +7,12 @@ import logging
 from datetime import datetime
 from dotenv import load_dotenv
 import time
+import time
+import logging
 
-# --- LOGGING SETUP ---
+#  Force logging to use UTC
+logging.Formatter.converter = time.gmtime
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
@@ -33,14 +37,7 @@ def main():
         model = joblib.load(os.path.join(model_dir, "model.pkl"))
         scaler = joblib.load(os.path.join(model_dir, "scaler.pkl"))
         logging.info("Model and Scaler loaded successfully.")
-        time.sleep(3)  
-        # Replace the download logic with this:
-        # model_path = os.path.join("aqi_model", "model.pkl")
-        # scaler_path = os.path.join("aqi_model", "scaler.pkl")
-
-        # model = joblib.load(model_path)
-        # scaler = joblib.load(scaler_path)
-        # logging.info("Model loaded from local directory to bypass network timeout.")
+        time.sleep(3)
 
         # 3. FEATURE STORE DATA RETRIEVAL
         logging.info("Accessing Feature Group: karachi_aqi_weather")
@@ -49,7 +46,6 @@ def main():
         hist_df = None
         for attempt in range(3):
             try:
-                # Bypass broken View metadata by reading from Group directly
                 hist_df = aqi_fg.read(read_options={"use_hive": False})
                 if not hist_df.empty:
                     break
@@ -60,8 +56,12 @@ def main():
         if hist_df is None or hist_df.empty:
             raise Exception("No data found in Feature Group!")
 
-        # Crucial: Ensure column names are lowercase for the loop logic
+        # Ensure lowercase
         hist_df.columns = [c.lower() for c in hist_df.columns]
+
+        #  Ensure historical time is treated as UTC
+        hist_df['time'] = pd.to_datetime(hist_df['time'], utc=True)
+
         hist_df = hist_df.sort_values('time').reset_index(drop=True)
         logging.info(f"Historical data loaded. Rows: {len(hist_df)}")
 
@@ -73,8 +73,9 @@ def main():
             "longitude": 67.0011,
             "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m",
             "forecast_days": 3,
-            "timezone": "auto"
+            "timezone": "UTC"   #  Force UTC instead of auto
         }
+
         resp = requests.get(weather_url, params=params, timeout=30)
         resp.raise_for_status()
         future_weather_df = pd.DataFrame(resp.json()["hourly"])
@@ -86,9 +87,10 @@ def main():
 
         for i in range(len(future_weather_df)):
             weather_row = future_weather_df.iloc[i]
-            target_time = pd.to_datetime(weather_row['time'])
 
-            # Calculation of features
+            #  Parse forecast time as UTC
+            target_time = pd.to_datetime(weather_row['time'], utc=True)
+
             pm25_lag_1 = current_window['pm2_5'].iloc[-1]
             pm25_lag_24 = current_window['pm2_5'].iloc[-24] if len(current_window) >= 24 else pm25_lag_1
 
@@ -114,12 +116,12 @@ def main():
                 'forecast_hour_out': i + 1
             })
 
-            # Update window for next iteration's lag
             new_row = pd.DataFrame([{
                 'time': int(target_time.timestamp() * 1000),
                 'pm2_5': prediction,
                 'city': 'Karachi'
             }])
+
             current_window = pd.concat([current_window, new_row], ignore_index=True)
 
         predictions_final_df = pd.DataFrame(predictions_list)

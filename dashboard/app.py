@@ -39,6 +39,49 @@ particlesJS('particles-js', {
 </script>
 """, unsafe_allow_html=True)
 
+# --- SIDEBAR & REFRESH LOGIC ---
+st.sidebar.title("🛠️ Control Panel")
+if st.sidebar.button('Refresh Live Data'):
+    st.cache_data.clear()
+    st.rerun()
+
+st.sidebar.write("---")
+st.sidebar.subheader("Project Maturity: Level 3")
+st.sidebar.info("System Version: `AQI-KHI-v2.1.0` (Stable)")
+
+# Bar-- of Aqi simple
+st.set_page_config(page_title="Air Quality Dashboard", layout="wide")
+
+# Hero Section
+st.markdown("""
+    <style>
+    .hero {
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        padding: 50px 20px;
+        border-radius: 20px;
+        text-align: center;
+        color: white;
+        margin-bottom: 30px;
+    }
+    .hero h1 {
+        font-size: 48px;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+    .hero p {
+        font-size: 20px;
+        opacity: 0.9;
+    }
+    </style>
+
+    <div class="hero">
+        <h1>🌬️ Air Quality Intelligence Dashboard</h1>
+        <p>Real-time AQI Monitoring & AI-Powered 3-Day Forecast</p>
+    </div>
+""", unsafe_allow_html=True)
+
+st.write("Your dashboard content starts here...")
+
 load_dotenv()
 
 try:
