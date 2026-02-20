@@ -136,8 +136,15 @@ def main():
             online_enabled=True
         )
         
-        pred_fg.insert(predictions_final_df, write_options={"wait_for_job": False})
-        logging.info(" SUCCESS! Batch inference completed.")
+        for attempt in range(3):
+            try:
+                pred_fg.insert(predictions_final_df)
+                print("Insert successful")
+                break
+            except Exception as e:
+                print(f"Attempt {attempt+1} failed. Retrying...")
+                time.sleep(10)
+                logging.info(" SUCCESS! Batch inference completed.")
 
     except Exception as e:
         logging.error(f"PIPELINE FAILED: {str(e)}")
