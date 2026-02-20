@@ -22,18 +22,25 @@ def main():
         
         # Use one project session for everything
         project = hopsworks.login()
-        mr = project.get_model_registry()
+        #mr = project.get_model_registry()
         fs = project.get_feature_store()
 
         # 2. LOAD MODEL & SCALER
-        logging.info("Downloading model artifact (v2)...")
-        model_meta = mr.get_model("karachi_aqi_model", version=2)
-        model_dir = model_meta.download()
+        # logging.info("Downloading model artifact (v2)...")
+        # model_meta = mr.get_model("karachi_aqi_model", version=2)
+        # model_dir = model_meta.download()
 
-        model = joblib.load(os.path.join(model_dir, "model.pkl"))
-        scaler = joblib.load(os.path.join(model_dir, "scaler.pkl"))
-        logging.info("Model and Scaler loaded successfully.")
-        time.sleep(3)  
+        # model = joblib.load(os.path.join(model_dir, "model.pkl"))
+        # scaler = joblib.load(os.path.join(model_dir, "scaler.pkl"))
+        # logging.info("Model and Scaler loaded successfully.")
+        # time.sleep(3)  
+        # Replace the download logic with this:
+        model_path = os.path.join("aqi_model", "model.pkl")
+        scaler_path = os.path.join("aqi_model", "scaler.pkl")
+
+        model = joblib.load(model_path)
+        scaler = joblib.load(scaler_path)
+        logging.info("Model loaded from local directory to bypass network timeout.")
 
         # 3. FEATURE STORE DATA RETRIEVAL
         logging.info("Accessing Feature Group: karachi_aqi_weather")
