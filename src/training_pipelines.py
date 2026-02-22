@@ -8,7 +8,10 @@ from dotenv import load_dotenv
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, r2_score
+import time
 
+
+logging.Formatter.converter = time.gmtime
 
 logging.basicConfig(
     level=logging.INFO,

@@ -76,19 +76,18 @@ def main():
         # 3. GET DATA
         latest_df = get_latest_data()
 
-        # 4. CREATE/GET FEATURE GROUP
-        # Note: If you haven't deleted the old group yet, do it in the UI now!
+        # 4. CREATE and GET FEATURE GROUP
+        
         aqi_fg = fs.get_or_create_feature_group(
             name="karachi_aqi_weather",
             version=1,
             primary_key=['city', 'time'], # Composite key for better organization
             event_time='time',
-            online_enabled=True,          # Required to fix the 'Binder Error' in inference
+            online_enabled=True,         
             description="Karachi AQI and Weather historical data"
         )
 
         # 5. INSERT DATA
-        # insert() will handle both initial upload and future updates (upserts)
         logging.info("Uploading data to Hopsworks...")
         aqi_fg.insert(latest_df, write_options={"wait_for_job": False})
         

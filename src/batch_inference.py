@@ -7,10 +7,9 @@ import logging
 from datetime import datetime
 from dotenv import load_dotenv
 import time
-import time
 import logging
 
-#  Force logging to use UTC
+#  logging to use UTC
 logging.Formatter.converter = time.gmtime
 
 logging.basicConfig(
@@ -20,11 +19,10 @@ logging.basicConfig(
 
 def main():
     try:
-        # 1. INITIALIZATION & SINGLE SESSION
+       
         load_dotenv()
         logging.info("Connecting to Hopsworks...")
         
-        # Use one project session for everything
         project = hopsworks.login()
         mr = project.get_model_registry()
         fs = project.get_feature_store()
@@ -56,10 +54,10 @@ def main():
         if hist_df is None or hist_df.empty:
             raise Exception("No data found in Feature Group!")
 
-        # Ensure lowercase
+        # lowercase
         hist_df.columns = [c.lower() for c in hist_df.columns]
 
-        #  Ensure historical time is treated as UTC
+        # historical time is treated as UTC
         hist_df['time'] = pd.to_datetime(hist_df['time'], utc=True)
 
         hist_df = hist_df.sort_values('time').reset_index(drop=True)
@@ -73,14 +71,14 @@ def main():
             "longitude": 67.0011,
             "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m",
             "forecast_days": 3,
-            "timezone": "UTC"   #  Force UTC instead of auto
+            "timezone": "UTC"   #  UTC instead of auto
         }
 
         resp = requests.get(weather_url, params=params, timeout=30)
         resp.raise_for_status()
         future_weather_df = pd.DataFrame(resp.json()["hourly"])
 
-        # 5. GENERATE ALIGNED FORECAST (Sliding Window)
+        # 5. GENERATE ALIGNED FORECAST
         logging.info("Running inference loop...")
         predictions_list = []
         current_window = hist_df.copy()

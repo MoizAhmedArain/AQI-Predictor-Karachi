@@ -1,7 +1,7 @@
 /* GLOBAL BACKGROUND  */
 .stApp {
-    background: radial-gradient(circle at 15% 25%, #0a0f1c, #04060d 75%);
-    color: #e6edf3;
+    background: radial-gradient(circle at 15% 25%, #fff, #304bba 75%);
+    color: #010407;
 }
 
 
@@ -11,10 +11,10 @@
 
 /*  GLASS CARD  */
 .glass-card {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(6, 6, 6, 0.04);
     border-radius: 20px;
     padding: 28px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     backdrop-filter: blur(18px);
     box-shadow: 0 10px 40px rgba(0,0,0,0.5);
     transition: all 0.25s ease;
@@ -42,6 +42,6 @@ h1, h2, h3 {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #00d4ff;
+    background: #141414;
     border-radius: 10px;
 }

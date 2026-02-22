@@ -40,7 +40,7 @@ particlesJS('particles-js', {
 """, unsafe_allow_html=True)
 
 # --- SIDEBAR & REFRESH LOGIC ---
-st.sidebar.title("🛠️ Control Panel")
+st.sidebar.title("Control Panel")
 if st.sidebar.button('Refresh Live Data'):
     st.cache_data.clear()
     st.rerun()
@@ -50,13 +50,12 @@ st.sidebar.subheader("Project Maturity: Level 3")
 st.sidebar.info("System Version: `AQI-KHI-v2.1.0` (Stable)")
 
 # Bar-- of Aqi simple
-st.set_page_config(page_title="Air Quality Dashboard", layout="wide")
 
 # Hero Section
 st.markdown("""
     <style>
     .hero {
-        background: linear-gradient(90deg, #667eea, #764ba2);
+        background: linear-gradient(90deg, #00BCD4, #2196F3);
         padding: 50px 20px;
         border-radius: 20px;
         text-align: center;
@@ -75,12 +74,12 @@ st.markdown("""
     </style>
 
     <div class="hero">
-        <h1>🌬️ Air Quality Intelligence Dashboard</h1>
-        <p>Real-time AQI Monitoring & AI-Powered 3-Day Forecast</p>
+        <h1>Air Quality Intelligence Dashboard</h1>
+        <p>Real time AQI Monitoring & AI Powered 3-Day Forecast</p>
     </div>
 """, unsafe_allow_html=True)
 
-st.write("Your dashboard content starts here...")
+
 
 load_dotenv()
 
@@ -106,8 +105,9 @@ try:
             
             # CRITICAL: Ensure time is datetime for the graph
             df["prediction_time"] = pd.to_datetime(df["prediction_time"])
-            df = df.sort_values("prediction_time")
-            return df
+            df = df.sort_values("prediction_time", ascending=False)
+            latest_batch = df.head(72).sort_values("prediction_time")
+            return latest_batch
         except Exception as e:
             st.error(f"Failed to load forecast data: {e}")
     
@@ -160,8 +160,8 @@ try:
 
     
     st.markdown("### 72 Hour Trajectory") 
-    if st.button("Clear cache"):
-        st.cache_data.clear()
+    # if st.button("Clear cache"):
+    #     st.cache_data.clear()
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=df_forecast["prediction_time"],
@@ -176,7 +176,7 @@ try:
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#e6edf3"),
+        font=dict(color="#111212"),
         hovermode="x unified",
         margin=dict(l=0, r=0, t=30, b=0),
         height=400,
@@ -186,14 +186,14 @@ try:
     st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
-    st.markdown("### Historical Insights (City Patterns)")
+    st.markdown("### Historical Insights Karachi")
 
     if eda_df is not None:
         tab1, tab2 = st.tabs(["Daily Cycle", "Weather Correlations"])
         
         with tab1:
             hourly_avg = eda_df.groupby('hour')['pm2_5'].mean().reset_index()
-            fig_hour = go.Figure(go.Scatter(x=hourly_avg['hour'], y=hourly_avg['pm2_5'], fill='tozeroy', line_color='#00d4ff'))
+            fig_hour = go.Figure(go.Scatter(x=hourly_avg['hour'], y=hourly_avg['pm2_5'], fill='tozeroy', line_color="#090909"))
             fig_hour.update_layout(title="Average PM2.5 by Hour (Local Time)", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
             st.plotly_chart(fig_hour, use_container_width=True)
 
@@ -204,11 +204,121 @@ try:
             fig_heat.update_layout(title="Correlation: Weather vs Pollution", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
             st.plotly_chart(fig_heat, use_container_width=True)
 
+    # 2. 
+    st.write("---")
+    st.subheader("Daily Forecast Summary")
+    
+    df_daily = df_forecast.copy()
+    df_daily['date'] = df_daily['prediction_time'].dt.strftime('%a, %d %b')
+    daily_stats = df_daily.groupby('date')['predicted_pm2_5'].agg(['mean', 'min', 'max']).reset_index()
+    daily_stats['sort_date'] = pd.to_datetime(daily_stats['date'], format='%a, %d %b')
+    daily_stats = daily_stats.sort_values('sort_date').head(3)
+
+    
+   
+    card_cols = st.columns(3, gap="medium")
+
+    st.markdown("""
+        <style>
+        .forecast-card {
+            /* Matching the deep charcoal/navy from your image */
+            background-color: ##ffffff; 
+            border-radius: 12px; 
+            
+            /* Increasing vertical size */
+            padding: 40px 20px; 
+            min-height: 220px;
+            
+            text-align: center;
+            
+            /* The specific orange bottom border from your screenshot */
+            border-bottom: 6px solid #f6742a; 
+            
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .date-text { 
+            color: #21252e; 
+            font-size: 1.3rem; 
+            font-weight: 600; 
+            margin-bottom: 15px;
+        }
+        
+        .aqi-val { 
+            /* Vibrant orange for the main number */
+            color: #ffffff; 
+            font-size: 3.5rem; 
+            font-weight: 800; 
+            line-height: 1;
+        }
+        
+        .range-text { 
+            color: #ffffff; 
+            font-size: 0.9rem; 
+            margin-top: 10px;
+            letter-spacing: 0.5px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Loop to render cards
+    for i, (_, row) in enumerate(daily_stats.iterrows()):
+        with card_cols[i]:
+            st.markdown(f"""
+                <div class="forecast-card">
+                    <div class="date-text">{row['date']}</div>
+                    <div class="aqi-val">{int(row['mean'])}</div>
+                    <div class="range-text">Range: {int(row['min'])} - {int(row['max'])}</div>
+                </div>
+            """, unsafe_allow_html=True)
+    
     with st.expander(" Model Engineering & Metadata"):
+    # Custom CSS for the Black Metadata Cards
+        st.markdown("""
+            <style>
+            .meta-card {
+                background-color: #ffffff; /* Pure White background */
+                border: 1px solid #333333; /* Dark grey border for definition */
+                border-radius: 10px;
+                padding: 20px;
+                text-align: center;
+                margin-bottom: 10px;
+            }
+            .meta-label {
+                color: #000000; /* black label */
+                font-size: 0.85rem;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            .meta-value {
+                color: #000000; /* Black text */
+                font-size: 1.1rem;
+                font-weight: 600;
+                margin-top: 5px;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
         c1, c2, c3 = st.columns(3)
-        c1.info("**Algorithm:** Random Forest v2")
-        c2.info("**Training RMSE:** 4.19")
-        c3.info("**Strategy:** Recursive Multi-Step")
+        
+        with c1:
+            st.markdown("""<div class="meta-card">
+                <div class="meta-label">Algorithm</div>
+                <div class="meta-value">Random Forest v2</div>
+            </div>""", unsafe_allow_html=True)
+            
+        with c2:
+            st.markdown("""<div class="meta-card">
+                <div class="meta-label">Training RMSE</div>
+                <div class="meta-value">4.19</div>
+            </div>""", unsafe_allow_html=True)
+            
+        with c3:
+            st.markdown("""<div class="meta-card">
+                <div class="meta-label">Strategy</div>
+                <div class="meta-value">Recursive Multi-Step</div>
+            </div>""", unsafe_allow_html=True)
 
 except Exception as e:
     st.error(f"Dashboard error: {e}")
