@@ -101,7 +101,7 @@ try:
             project = get_project()
             fs = project.get_feature_store()
             fg = fs.get_feature_group(name="aqi_predictions", version=1)
-            df = fg.read()
+            df = fg.read("use_hive" == False)
             
             # CRITICAL: Ensure time is datetime for the graph
             df["prediction_time"] = pd.to_datetime(df["prediction_time"])
@@ -119,7 +119,7 @@ try:
             project = get_project()
             fs = project.get_feature_store()
             aqi_fg = fs.get_feature_group(name="karachi_aqi_weather", version=1)
-            df = aqi_fg.read()
+            df = aqi_fg.read("use_hive"== False)
             if 'hour' not in df.columns and 'time' in df.columns:
                 df['time'] = pd.to_datetime(df['time'])
                 df['hour'] = df['time'].dt.hour
