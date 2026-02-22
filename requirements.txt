@@ -1,9 +1,11 @@
 hopsworks
 pandas
-confluent-kafka
 numpy
 scikit-learn
 requests
 streamlit
 python-dotenv
 joblib
+confluent-kafka
+plotly
+matplotlib
