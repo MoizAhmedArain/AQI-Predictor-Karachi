@@ -29,7 +29,7 @@ def main():
 
         # 2. LOAD MODEL & SCALER
         logging.info("Downloading model artifact (v2)...")
-        model_meta = mr.get_model("karachi_aqi_model", version=2)
+        model_meta = mr.get_model("karachi_aqi_model", version=1)
         model_dir = model_meta.download()
 
         model = joblib.load(os.path.join(model_dir, "model.pkl"))
