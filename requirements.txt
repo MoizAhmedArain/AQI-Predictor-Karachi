@@ -9,3 +9,4 @@ joblib
 confluent-kafka
 plotly
 matplotlib
+urllib3<2.0.0
