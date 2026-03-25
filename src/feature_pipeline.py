@@ -68,6 +68,7 @@ def main():
         
         # 2. CONNECT TO HOPSWORKS
         project = hopsworks.login(
+            host="app.hopsworks.ai",
             api_key_value=os.getenv("HOPSWORKS_API_KEY"),
             project=os.getenv("HOPSWORKS_PROJECT_NAME")
         )
